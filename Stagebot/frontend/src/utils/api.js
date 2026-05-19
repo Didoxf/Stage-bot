@@ -4,17 +4,19 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 // ── Auth token (JWT admin) ─────────────────────────────────────────────────
+// sessionStorage → token détruit automatiquement à la fermeture du navigateur
+// Login obligatoire à chaque nouvelle session
 
 export function getAdminToken() {
-  return localStorage.getItem('pfe_admin_token');
+  return sessionStorage.getItem('pfe_admin_token');
 }
 
 export function setAdminToken(token) {
-  localStorage.setItem('pfe_admin_token', token);
+  sessionStorage.setItem('pfe_admin_token', token);
 }
 
 export function clearAdminToken() {
-  localStorage.removeItem('pfe_admin_token');
+  sessionStorage.removeItem('pfe_admin_token');
 }
 
 function authHeaders() {
@@ -23,7 +25,6 @@ function authHeaders() {
 }
 
 // ── Chat ───────────────────────────────────────────────────────────────────
-
 export async function sendMessage(question, sessionId, lang = 'fr') {
   const res = await fetch(`${BASE_URL}/chat`, {
     method: 'POST',
@@ -36,7 +37,6 @@ export async function sendMessage(question, sessionId, lang = 'fr') {
 }
 
 // ── Q/R publiques (questions populaires) ─────────────────────────────────
-
 export async function getQA() {
   const res = await fetch(`${BASE_URL}/qa`);
   const data = await res.json();
@@ -45,7 +45,6 @@ export async function getQA() {
 }
 
 // ── Admin Auth ─────────────────────────────────────────────────────────────
-
 export async function adminLogin(email, password) {
   const res = await fetch(`${BASE_URL}/admin/login`, {
     method: 'POST',
@@ -58,7 +57,6 @@ export async function adminLogin(email, password) {
 }
 
 // ── Admin CRUD Q/R ─────────────────────────────────────────────────────────
-
 export async function adminGetQA() {
   const res = await fetch(`${BASE_URL}/admin/qa`, {
     headers: authHeaders(),
