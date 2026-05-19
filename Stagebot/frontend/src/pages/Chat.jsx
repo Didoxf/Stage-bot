@@ -76,6 +76,21 @@ export default function Chat() {
       setLoading(false);
     }
   }
+  // Fonction spéciale pour les clics sur la sidebar
+// Envoie directement la réponse depuis la BDD sans passer par Groq
+async function sendFromQA(qa) {
+  const question = getQLabel(qa);
+  const answer = lang === 'en' && qa.answer_en ? qa.answer_en 
+               : lang === 'ar' && qa.answer_ar ? qa.answer_ar 
+               : qa.answer_fr;
+
+  // Ajouter question + réponse directement dans le chat
+  setMessages(prev => [
+    ...prev,
+    { role: 'user', content: question, id: Date.now() },
+    { role: 'bot', content: answer, id: Date.now() + 1 },
+  ]);
+}
 
   function reset() {
     setMessages([]);
