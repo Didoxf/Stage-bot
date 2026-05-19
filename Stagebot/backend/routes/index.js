@@ -33,9 +33,9 @@ const NOT_FOUND = `Je n'ai pas pu trouver une réponse à votre question dans ma
 
 Merci de contacter le responsable de stage selon votre domaine de recherche :
 
-📧 Département Sciences de l'Information → SAMIAMAZA@hotmail.fr
-📧 Département Mécanique → mattiasbordron@hotmail.fr
-📧 Département Génie Électrique → jean-philippeMARTIN@hotmail.fr`;
+📧 Département Sciences de l'Information → samia.maza@univ-lorraine.fr
+📧 Département Mécanique → matthias.bordron@univ-lorraine.fr
+📧 Département Génie Électrique → jean-philippe.martin@univ-lorraine.fr`;
 
 // ── Health ────────────────────────────────────────────────────────────────────
 router.get('/health', (req, res) => res.json({ status: 'ok' }));
