@@ -317,11 +317,6 @@ ${knowledgeBase}`;
 
         let answer = parsed.choices?.[0]?.message?.content || NOT_FOUND;
 
-        // Si la réponse est trop courte elle ne vient pas de la base
-        if (answer.length < 20) {
-          answer = NOT_FOUND;
-        }
-
         history.push({ role: 'assistant', content: answer });
 
         res.json({ success: true, answer, sessionId: sid });
