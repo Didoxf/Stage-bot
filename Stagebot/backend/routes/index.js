@@ -15,7 +15,7 @@ const router = express.Router();
 // ── Multer — upload Word en mémoire ──────────────────────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (
       file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
@@ -74,8 +74,6 @@ router.post('/admin/login', (req, res) => {
     email    === process.env.ADMIN_EMAIL &&
     password === process.env.ADMIN_PASSWORD
   ) {
-    // Token sans expiration — sessionStorage gère la durée de vie côté frontend
-    // Le token est détruit automatiquement à la fermeture du navigateur
     const token = jwt.sign(
       { email, role: 'admin', loginAt: Date.now() },
       process.env.JWT_SECRET
@@ -154,18 +152,12 @@ router.post('/admin/upload', auth, upload.single('document'), async (req, res) =
     if (!req.file) {
       return res.status(400).json({ error: 'Aucun fichier reçu' });
     }
-
-    // Extraire le texte du fichier Word
     const result = await mammoth.extractRawText({ buffer: req.file.buffer });
     const text = result.value.trim();
-
     if (!text || text.length < 10) {
       return res.status(400).json({ error: 'Le document est vide ou illisible' });
     }
-
     const db = getDb();
-
-    // Sauvegarder dans MongoDB (remplace l'ancien document)
     await db.collection('knowledge_base').replaceOne(
       { type: 'document' },
       {
@@ -177,14 +169,12 @@ router.post('/admin/upload', auth, upload.single('document'), async (req, res) =
       },
       { upsert: true }
     );
-
     res.json({
       success: true,
       filename: req.file.originalname,
       wordCount: text.split(' ').length,
       preview: text.slice(0, 200) + '...',
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -223,7 +213,6 @@ router.post('/chat', async (req, res) => {
   try {
     const db = getDb();
 
-    // 1. Q/R manuelles
     const qaList = await db.collection('qa_pairs').find({}).toArray();
     if (qaList.length > 0) {
       knowledgeBase += '=== QUESTIONS ET RÉPONSES ===\n\n';
@@ -235,7 +224,6 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    // 2. Document Word uploadé
     const doc = await db.collection('knowledge_base').findOne({ type: 'document' });
     if (doc?.text) {
       knowledgeBase += '\n=== DOCUMENT DE RÉFÉRENCE ===\n\n';
@@ -246,11 +234,6 @@ router.post('/chat', async (req, res) => {
     console.error('Erreur chargement base:', err.message);
   }
 
-  // Si aucune base de données disponible
-  if (!knowledgeBase.trim()) {
-    return res.json({ success: true, answer: NOT_FOUND, sessionId: sessionId || 'new' });
-  }
-
   // ── Gestion session ──────────────────────────────────────────────────────────
   const sid = sessionId || `s_${Date.now()}`;
   if (!conversations.has(sid)) conversations.set(sid, []);
@@ -259,27 +242,22 @@ router.post('/chat', async (req, res) => {
   history.push({ role: 'user', content: question.trim() });
   if (history.length > 10) history.splice(0, history.length - 10);
 
-  // ── Prompt système STRICT ────────────────────────────────────────────────────
+  // ── Prompt système ────────────────────────────────────────────────────────────
   const langLabel = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français';
 
   const systemPrompt = `Tu es l'assistant PFE de l'ENSEM Nancy (École Nationale Supérieure d'Électricité et de Mécanique).
+Tu aides les étudiants de 3ème année dans leur recherche de stage de fin d'études.
+Réponds toujours en ${langLabel}.
 
-RÈGLE ABSOLUE : Tu dois répondre UNIQUEMENT à partir des informations contenues dans la BASE DE CONNAISSANCES ci-dessous.
-Tu n'as PAS le droit d'inventer ou utiliser des connaissances externes.
-
-Si la question correspond à une entrée dans la BASE DE CONNAISSANCES, reproduis la réponse correspondante fidèlement.
-Si la question est similaire ou reformulée différemment, trouve la réponse la plus proche dans la base et utilise-la.
-Si aucune réponse ne correspond même approximativement, réponds EXACTEMENT avec ce message :
+RÈGLES IMPORTANTES :
+1. Pour les salutations (bonjour, salam, hello, etc.) : réponds poliment et présente-toi comme l'assistant PFE ENSEM, puis invite l'étudiant à poser sa question sur le stage.
+2. Pour les questions liées au PFE/stage : réponds UNIQUEMENT à partir de la BASE DE CONNAISSANCES ci-dessous. Ne jamais inventer.
+3. Si la question est liée au PFE/stage mais sans réponse dans la base : réponds EXACTEMENT avec ce message :
 "${NOT_FOUND}"
+4. Sois tolérant avec les fautes d'orthographe et les reformulations.
+5. Sois concis et professionnel.
 
-RÈGLES SUPPLÉMENTAIRES :
-- Sois tolérant avec les fautes d'orthographe et les reformulations
-- Réponds dans la langue de l'étudiant (actuellement : ${langLabel})
-- Si la question est hors sujet PFE/stage, réponds avec le message NOT_FOUND
-- Sois concis et précis
-
-BASE DE CONNAISSANCES :
-${knowledgeBase}`;
+${knowledgeBase.trim() ? `BASE DE CONNAISSANCES :\n${knowledgeBase}` : ''}`;
 
   // ── Appel Groq ───────────────────────────────────────────────────────────────
   const payload = JSON.stringify({
@@ -288,7 +266,7 @@ ${knowledgeBase}`;
       { role: 'system', content: systemPrompt },
       ...history,
     ],
-    temperature: 0.0,
+    temperature: 0.1,
     max_tokens: 1024,
   });
 
@@ -309,18 +287,13 @@ ${knowledgeBase}`;
     groqRes.on('end', () => {
       try {
         const parsed = JSON.parse(data);
-
         if (parsed.error) {
           console.error('Erreur Groq:', parsed.error);
           return res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
         }
-
-        let answer = parsed.choices?.[0]?.message?.content || NOT_FOUND;
-
+        const answer = parsed.choices?.[0]?.message?.content || NOT_FOUND;
         history.push({ role: 'assistant', content: answer });
-
         res.json({ success: true, answer, sessionId: sid });
-
       } catch (e) {
         res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
       }
