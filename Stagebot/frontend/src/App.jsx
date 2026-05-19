@@ -1,11 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-
-function Home() {
-  return <div style={{padding:'2rem', fontFamily:'sans-serif'}}>
-    <h1>PFE Assistant ENSEM</h1>
-    <p>Site en cours de deploiement...</p>
-  </div>;
-}
+import Home from './pages/Home';
 
 export default function App() {
   return (
