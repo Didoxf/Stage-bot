@@ -1,22 +1,67 @@
-// routes/index.js — All routes
+// routes/index.js — PFE ENSEM
+// Le chatbot répond UNIQUEMENT depuis la base de données
+// Si pas de réponse trouvée → message de contact personnalisé
 
-const express = require('express');
-const https   = require('https');
-const jwt     = require('jsonwebtoken');
-const auth    = require('../middleware/auth');
+const express  = require('express');
+const https    = require('https');
+const jwt      = require('jsonwebtoken');
+const multer   = require('multer');
+const mammoth  = require('mammoth');
+const auth     = require('../middleware/auth');
 const { getDb, getObjectId } = require('../utils/db');
 
 const router = express.Router();
 
-// ── Health ───────────────────────────────────────────────────────────────────
+// ── Multer — upload Word en mémoire ──────────────────────────────────────────
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
+  fileFilter: (req, file, cb) => {
+    if (
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.originalname.endsWith('.docx')
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error('Seuls les fichiers .docx sont acceptés'));
+    }
+  },
+});
+
+// ── Message si pas de réponse ─────────────────────────────────────────────────
+const NOT_FOUND = `Je n'ai pas pu trouver une réponse à votre question dans ma base de données.
+
+Merci de contacter le responsable de stage selon votre domaine de recherche :
+
+📧 Département Sciences de l'Information → SAMIAMAZA@hotmail.fr
+📧 Département Mécanique → mattiasbordron@hotmail.fr
+📧 Département Génie Électrique → jean-philippeMARTIN@hotmail.fr`;
+
+// ── Health ────────────────────────────────────────────────────────────────────
 router.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-// ── Public: Get featured Q/A (for sidebar + suggestions) ─────────────────────
+// ── Public: Get Q/A ───────────────────────────────────────────────────────────
 router.get('/qa', async (req, res) => {
   try {
     const db = getDb();
     const qa = await db.collection('qa_pairs').find({}).toArray();
     res.json(qa);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Public: Get document knowledge base info ──────────────────────────────────
+router.get('/knowledge', async (req, res) => {
+  try {
+    const db = getDb();
+    const doc = await db.collection('knowledge_base').findOne({ type: 'document' });
+    res.json({
+      hasDocument: !!doc,
+      filename: doc?.filename || null,
+      uploadedAt: doc?.uploadedAt || null,
+      wordCount: doc?.text?.split(' ').length || 0,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -102,54 +147,147 @@ router.delete('/admin/qa/:id', auth, async (req, res) => {
   }
 });
 
-// ── Chat — Groq avec base de données ─────────────────────────────────────────
+// ── Admin: Upload fichier Word ─────────────────────────────────────────────────
+router.post('/admin/upload', auth, upload.single('document'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier reçu' });
+    }
+
+    // Extraire le texte du fichier Word
+    const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+    const text = result.value.trim();
+
+    if (!text || text.length < 10) {
+      return res.status(400).json({ error: 'Le document est vide ou illisible' });
+    }
+
+    const db = getDb();
+
+    // Sauvegarder dans MongoDB (remplace l'ancien document)
+    await db.collection('knowledge_base').replaceOne(
+      { type: 'document' },
+      {
+        type: 'document',
+        filename: req.file.originalname,
+        text: text,
+        uploadedAt: new Date(),
+        wordCount: text.split(' ').length,
+      },
+      { upsert: true }
+    );
+
+    res.json({
+      success: true,
+      filename: req.file.originalname,
+      wordCount: text.split(' ').length,
+      preview: text.slice(0, 200) + '...',
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Admin: Supprimer le document ──────────────────────────────────────────────
+router.delete('/admin/document', auth, async (req, res) => {
+  try {
+    const db = getDb();
+    await db.collection('knowledge_base').deleteOne({ type: 'document' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
 const conversations = new Map();
-
-const NOT_FOUND = `Je n'ai pas pu trouver une réponse à votre question.
-
-Merci de contacter le responsable de stage selon votre domaine :
-
-📧 Sciences de l'Information → SAMIAMAZA@hotmail.fr
-📧 Mécanique → mattiasbordron@hotmail.fr
-📧 Génie Électrique → jean-philippeMARTIN@hotmail.fr`;
 
 router.post('/chat', async (req, res) => {
   const { question, sessionId, lang = 'fr' } = req.body;
-  if (!question?.trim()) return res.status(400).json({ error: 'Question requise' });
+
+  if (!question?.trim()) {
+    return res.status(400).json({ error: 'Question requise' });
+  }
 
   const { GROQ_API_KEY, GROQ_MODEL } = process.env;
-  if (!GROQ_API_KEY) return res.json({ success: true, answer: NOT_FOUND, sessionId });
 
-  // Load all Q/A from DB to inject in system prompt
+  if (!GROQ_API_KEY) {
+    return res.json({ success: true, answer: NOT_FOUND, sessionId });
+  }
+
+  // ── Charger la base de connaissances ────────────────────────────────────────
   let knowledgeBase = '';
+
   try {
     const db = getDb();
-    const qa = await db.collection('qa_pairs').find({}).toArray();
-    knowledgeBase = qa.map((q, i) =>
-      `Q${i+1}: ${q.question_fr}\nR${i+1}: ${q.answer_fr}`
-    ).join('\n\n');
-  } catch {}
 
+    // 1. Q/R manuelles
+    const qaList = await db.collection('qa_pairs').find({}).toArray();
+    if (qaList.length > 0) {
+      knowledgeBase += '=== QUESTIONS ET RÉPONSES ===\n\n';
+      qaList.forEach((qa, i) => {
+        knowledgeBase += `Q: ${qa.question_fr}\nR: ${qa.answer_fr}\n`;
+        if (qa.question_en) knowledgeBase += `Q(EN): ${qa.question_en}\nR(EN): ${qa.answer_en}\n`;
+        if (qa.question_ar) knowledgeBase += `Q(AR): ${qa.question_ar}\nR(AR): ${qa.answer_ar}\n`;
+        knowledgeBase += '\n';
+      });
+    }
+
+    // 2. Document Word uploadé
+    const doc = await db.collection('knowledge_base').findOne({ type: 'document' });
+    if (doc?.text) {
+      knowledgeBase += '\n=== DOCUMENT DE RÉFÉRENCE ===\n\n';
+      knowledgeBase += doc.text;
+    }
+
+  } catch (err) {
+    console.error('Erreur chargement base:', err.message);
+  }
+
+  // Si aucune base de données disponible
+  if (!knowledgeBase.trim()) {
+    return res.json({ success: true, answer: NOT_FOUND, sessionId: sessionId || 'new' });
+  }
+
+  // ── Gestion session ──────────────────────────────────────────────────────────
   const sid = sessionId || `s_${Date.now()}`;
   if (!conversations.has(sid)) conversations.set(sid, []);
   const history = conversations.get(sid);
 
   history.push({ role: 'user', content: question.trim() });
-  if (history.length > 20) history.splice(0, history.length - 20);
+  if (history.length > 10) history.splice(0, history.length - 10);
 
-  const systemPrompt = `Tu es l'assistant PFE ENSEM de l'École Nationale Supérieure d'Électricité et de Mécanique de Nancy.
-Tu aides les étudiants de 3ème année concernant leur stage de fin d'études (PFE).
-Réponds UNIQUEMENT à partir de la base de connaissances ci-dessous.
-Si la question n'est pas dans la base, réponds EXACTEMENT : "${NOT_FOUND}"
-Sois tolérant avec les fautes d'orthographe. Réponds dans la langue de l'utilisateur (${lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'}).
+  // ── Prompt système STRICT ────────────────────────────────────────────────────
+  const langLabel = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français';
 
-BASE DE CONNAISSANCES:
+  const systemPrompt = `Tu es l'assistant PFE de l'ENSEM Nancy (École Nationale Supérieure d'Électricité et de Mécanique).
+
+RÈGLE ABSOLUE : Tu dois répondre UNIQUEMENT à partir des informations contenues dans la BASE DE CONNAISSANCES ci-dessous.
+Tu n'as PAS le droit d'inventer, supposer ou utiliser des connaissances externes.
+Tu n'es PAS un chatbot général — tu es spécialisé UNIQUEMENT sur le stage PFE ENSEM.
+
+Si la question n'a PAS de réponse dans la base de connaissances, réponds EXACTEMENT avec ce message mot pour mot :
+"${NOT_FOUND}"
+
+RÈGLES SUPPLÉMENTAIRES :
+- Sois tolérant avec les fautes d'orthographe et les reformulations
+- Comprends l'intention de l'étudiant même si la question est mal formulée
+- Réponds dans la langue de l'étudiant (actuellement : ${langLabel})
+- Si la question est hors sujet (pas lié au PFE/stage), réponds avec le message NOT_FOUND
+- Sois concis et précis
+
+BASE DE CONNAISSANCES :
 ${knowledgeBase}`;
 
+  // ── Appel Groq ───────────────────────────────────────────────────────────────
   const payload = JSON.stringify({
     model: GROQ_MODEL || 'llama-3.3-70b-versatile',
-    messages: [{ role: 'system', content: systemPrompt }, ...history],
-    temperature: 0.1,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...history,
+    ],
+    temperature: 0.0, // 0 = réponses strictement basées sur le contexte
     max_tokens: 1024,
   });
 
@@ -170,18 +308,49 @@ ${knowledgeBase}`;
     groqRes.on('end', () => {
       try {
         const parsed = JSON.parse(data);
-        if (parsed.error) return res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
-        const answer = parsed.choices?.[0]?.message?.content || NOT_FOUND;
+
+        if (parsed.error) {
+          console.error('Erreur Groq:', parsed.error);
+          return res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
+        }
+
+        let answer = parsed.choices?.[0]?.message?.content || NOT_FOUND;
+
+        // Vérification supplémentaire — si Groq répond quand même de sa tête
+        // on détecte les réponses qui ne citent pas la base
+        const reponseInvalide = [
+          'je pense que',
+          'généralement',
+          'en général',
+          'il est possible que',
+          'cela dépend',
+          'je suppose',
+        ];
+
+        // Si la réponse est très courte et ne vient clairement pas de la base
+        if (answer.length < 20) {
+          answer = NOT_FOUND;
+        }
+
         history.push({ role: 'assistant', content: answer });
+
         res.json({ success: true, answer, sessionId: sid });
-      } catch {
+
+      } catch (e) {
         res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
       }
     });
   });
 
-  groqReq.on('error', () => res.json({ success: true, answer: NOT_FOUND, sessionId: sid }));
-  groqReq.setTimeout(30000, () => { groqReq.destroy(); res.json({ success: true, answer: NOT_FOUND, sessionId: sid }); });
+  groqReq.on('error', () => {
+    res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
+  });
+
+  groqReq.setTimeout(30000, () => {
+    groqReq.destroy();
+    res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
+  });
+
   groqReq.write(payload);
   groqReq.end();
 });
