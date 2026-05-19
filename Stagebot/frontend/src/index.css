@@ -1,0 +1,50 @@
+/* src/index.css — PFE ENSEM Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: #f8f9fb;
+  color: #1a2a3a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* RTL support */
+[dir="rtl"] body { font-family: 'IBM Plex Sans Arabic', sans-serif; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #c8d8e8; border-radius: 3px; }
+
+/* ── Language Switcher ── */
+.lang-switcher {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.lang-btn {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #d0e0f0;
+  background: transparent;
+  color: #4a6a8a;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 2px;
+}
+
+.lang-btn--active {
+  background: #1a2a3a;
+  color: #ffffff;
+  border-color: #1a2a3a;
+}
+
+.lang-btn:hover:not(.lang-btn--active) {
+  background: #f0f6fc;
+  color: #1a6bbd;
+}

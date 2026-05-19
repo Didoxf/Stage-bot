@@ -1,0 +1,153 @@
+/* src/pages/AdminLogin.css */
+
+.adminlogin-root {
+  display: flex;
+  height: 100vh;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* Left side — form */
+.adminlogin-left {
+  width: 480px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 3rem;
+  background: #fff;
+  overflow-y: auto;
+}
+
+.adminlogin-back {
+  font-size: 0.85rem;
+  color: #4a6a8a;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 3rem;
+  transition: color 0.15s;
+}
+.adminlogin-back:hover { color: #1a6bbd; }
+
+.adminlogin-form-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.adminlogin-label-top {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8aa0b8;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.adminlogin-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a2a3a;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.adminlogin-sub {
+  font-size: 0.9rem;
+  color: #6b8aaa;
+  margin-bottom: 2.5rem;
+}
+
+.adminlogin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.adminlogin-field-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4a6a8a;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.adminlogin-input {
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #d0e0f0;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  color: #1a2a3a;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.adminlogin-input:focus { border-color: #1a2a3a; }
+
+.adminlogin-error {
+  padding: 0.75rem 1rem;
+  background: #fff5f5;
+  border: 1px solid #ffcccc;
+  border-radius: 3px;
+  color: #cc3333;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.adminlogin-btn {
+  width: 100%;
+  padding: 0.9rem;
+  background: #1a2a3a;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 0.5rem;
+}
+.adminlogin-btn:hover:not(:disabled) { background: #2a3a5a; }
+.adminlogin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Right side — image */
+.adminlogin-right {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.adminlogin-right-bg {
+  position: absolute;
+  inset: 0;
+  background: url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80') center/cover no-repeat;
+  filter: brightness(0.6);
+}
+
+.adminlogin-right-overlay {
+  position: absolute;
+  bottom: 3rem;
+  left: 2rem;
+  right: 2rem;
+  z-index: 2;
+}
+
+.adminlogin-right-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4a9fd4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.adminlogin-right-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
