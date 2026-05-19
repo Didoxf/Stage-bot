@@ -1,14 +1,15 @@
 // src/pages/AdminDashboard.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LangSwitcher from '../components/LangSwitcher';
-import EnsemLogo from '../components/EnsemLogo';
 import {
   adminGetQA, adminAddQA, adminUpdateQA, adminDeleteQA,
   adminToggleFeatured, clearAdminToken, getAdminToken
 } from '../utils/api';
 import './AdminDashboard.css';
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 const EMPTY_FORM = {
   question_fr: '', answer_fr: '',
@@ -17,11 +18,10 @@ const EMPTY_FORM = {
   category: 'general', featured: false,
 };
 
-// ── Q/R Modal ───────────────────────────────────────────────────────────────
+// ── Q/R Modal ─────────────────────────────────────────────────────────────────
 function QAModal({ initial, onSave, onClose, t }) {
   const [form, setForm] = useState(initial || EMPTY_FORM);
   const isEdit = !!initial?._id;
-
   function set(key, val) { setForm(prev => ({ ...prev, [key]: val })); }
 
   return (
@@ -31,10 +31,8 @@ function QAModal({ initial, onSave, onClose, t }) {
           <h2 className="modal-title">{isEdit ? t('modal_edit_title') : t('modal_add_title')}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
-
         <div className="modal-body">
           <div className="modal-grid">
-            {/* FR */}
             <div className="modal-field modal-field--full">
               <label className="modal-label">{t('modal_q_fr')}</label>
               <input className="modal-input" value={form.question_fr} onChange={e => set('question_fr', e.target.value)} />
@@ -43,8 +41,6 @@ function QAModal({ initial, onSave, onClose, t }) {
               <label className="modal-label">{t('modal_r_fr')}</label>
               <textarea className="modal-textarea" value={form.answer_fr} onChange={e => set('answer_fr', e.target.value)} />
             </div>
-
-            {/* EN */}
             <div className="modal-field">
               <label className="modal-label">{t('modal_q_en')}</label>
               <input className="modal-input" value={form.question_en} onChange={e => set('question_en', e.target.value)} />
@@ -53,8 +49,6 @@ function QAModal({ initial, onSave, onClose, t }) {
               <label className="modal-label">{t('modal_r_en')}</label>
               <textarea className="modal-textarea" value={form.answer_en} onChange={e => set('answer_en', e.target.value)} />
             </div>
-
-            {/* AR */}
             <div className="modal-field">
               <label className="modal-label">{t('modal_q_ar')}</label>
               <input className="modal-input" dir="rtl" value={form.question_ar} onChange={e => set('question_ar', e.target.value)} />
@@ -63,15 +57,11 @@ function QAModal({ initial, onSave, onClose, t }) {
               <label className="modal-label">{t('modal_r_ar')}</label>
               <textarea className="modal-textarea" dir="rtl" value={form.answer_ar} onChange={e => set('answer_ar', e.target.value)} />
             </div>
-
-            {/* Category */}
             <div className="modal-field">
               <label className="modal-label">{t('modal_category')}</label>
               <input className="modal-input" value={form.category} onChange={e => set('category', e.target.value)} />
             </div>
           </div>
-
-          {/* Featured toggle */}
           <div className="modal-featured-row">
             <label className="modal-toggle">
               <input type="checkbox" checked={form.featured} onChange={e => set('featured', e.target.checked)} />
@@ -80,7 +70,6 @@ function QAModal({ initial, onSave, onClose, t }) {
             <span className="modal-featured-label">{t('modal_featured')}</span>
           </div>
         </div>
-
         <div className="modal-footer">
           <button className="modal-cancel-btn" onClick={onClose}>{t('modal_cancel')}</button>
           <button className="modal-save-btn" onClick={() => onSave(form)}>{t('modal_save')}</button>
@@ -90,7 +79,7 @@ function QAModal({ initial, onSave, onClose, t }) {
   );
 }
 
-// ── Delete Modal ────────────────────────────────────────────────────────────
+// ── Delete Modal ──────────────────────────────────────────────────────────────
 function DeleteModal({ qa, onConfirm, onClose, t }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -111,17 +100,124 @@ function DeleteModal({ qa, onConfirm, onClose, t }) {
   );
 }
 
-// ── Main Dashboard ──────────────────────────────────────────────────────────
+// ── Document Upload Section ───────────────────────────────────────────────────
+function DocumentSection({ token }) {
+  const [docInfo, setDocInfo]     = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError]         = useState('');
+  const [success, setSuccess]     = useState('');
+  const fileRef = useRef();
+
+  useEffect(() => { loadDocInfo(); }, []);
+
+  async function loadDocInfo() {
+    try {
+      const res = await fetch(`${BASE_URL}/knowledge`);
+      const data = await res.json();
+      setDocInfo(data);
+    } catch {}
+  }
+
+  async function handleUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError('');
+    setSuccess('');
+
+    const formData = new FormData();
+    formData.append('document', file);
+
+    try {
+      const res = await fetch(`${BASE_URL}/admin/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      setSuccess(`✅ Document "${data.filename}" importé avec succès ! (${data.wordCount} mots)`);
+      loadDocInfo();
+    } catch (err) {
+      setError(`❌ Erreur : ${err.message}`);
+    } finally {
+      setUploading(false);
+      fileRef.current.value = '';
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm('Supprimer le document importé ?')) return;
+    try {
+      await fetch(`${BASE_URL}/admin/document`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDocInfo({ hasDocument: false });
+      setSuccess('Document supprimé.');
+    } catch {}
+  }
+
+  return (
+    <div className="doc-section">
+      <div className="doc-header">
+        <div>
+          <h2 className="doc-title">📄 Document de référence</h2>
+          <p className="doc-desc">
+            Importez un fichier Word (.docx) — le chatbot répondra <strong>uniquement</strong> à partir de ce document et des Q/R ci-dessous.
+          </p>
+        </div>
+        <div className="doc-actions">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".docx"
+            style={{ display: 'none' }}
+            onChange={handleUpload}
+          />
+          <button
+            className="doc-upload-btn"
+            onClick={() => fileRef.current.click()}
+            disabled={uploading}
+          >
+            {uploading ? '⏳ Importation...' : '⬆ Importer un fichier Word'}
+          </button>
+        </div>
+      </div>
+
+      {/* Status du document */}
+      {docInfo?.hasDocument ? (
+        <div className="doc-status doc-status--active">
+          <span>✅ Document actif : <strong>{docInfo.filename}</strong> ({docInfo.wordCount} mots)</span>
+          <button className="doc-delete-btn" onClick={handleDelete}>🗑 Supprimer</button>
+        </div>
+      ) : (
+        <div className="doc-status doc-status--empty">
+          ⚠️ Aucun document importé — le chatbot utilise uniquement les Q/R manuelles
+        </div>
+      )}
+
+      {error   && <div className="doc-msg doc-msg--error">{error}</div>}
+      {success && <div className="doc-msg doc-msg--success">{success}</div>}
+    </div>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [qaList, setQaList] = useState([]);
+  const [qaList, setQaList]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // null | 'add' | 'edit' | 'delete'
+  const [modal, setModal]     = useState(null);
   const [selected, setSelected] = useState(null);
+  const token = getAdminToken();
 
   useEffect(() => {
-    if (!getAdminToken()) { navigate('/admin/login'); return; }
+    if (!token) { navigate('/admin/login'); return; }
     loadQA();
   }, []);
 
@@ -143,17 +239,12 @@ export default function AdminDashboard() {
 
   async function handleSave(form) {
     try {
-      if (selected?._id) {
-        await adminUpdateQA(selected._id, form);
-      } else {
-        await adminAddQA(form);
-      }
+      if (selected?._id) await adminUpdateQA(selected._id, form);
+      else await adminAddQA(form);
       setModal(null);
       setSelected(null);
       loadQA();
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   }
 
   async function handleDelete() {
@@ -162,9 +253,7 @@ export default function AdminDashboard() {
       setModal(null);
       setSelected(null);
       loadQA();
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   }
 
   async function toggleFeatured(qa) {
@@ -197,7 +286,6 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Main */}
       <main className="admin-main">
         {/* Stats */}
         <div className="admin-stats">
@@ -215,10 +303,13 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Document Upload */}
+        <DocumentSection token={token} />
+
         {/* Q/A Table */}
         <div className="admin-qa-section">
           <div className="admin-qa-header">
-            <h2 className="admin-qa-title">Questions</h2>
+            <h2 className="admin-qa-title">Questions / Réponses</h2>
             <button className="admin-add-btn" onClick={() => { setSelected(null); setModal('add'); }}>
               {t('admin_add')}
             </button>
@@ -243,25 +334,15 @@ export default function AdminDashboard() {
                       <p className="admin-table-q">{qa.question_fr}</p>
                       <p className="admin-table-r">{qa.answer_fr?.slice(0, 90)}…</p>
                     </td>
-                    <td>
-                      <span className="admin-cat-badge">{qa.category}</span>
-                    </td>
+                    <td><span className="admin-cat-badge">{qa.category}</span></td>
                     <td style={{ textAlign: 'center' }}>
                       <button className="admin-star-btn" onClick={() => toggleFeatured(qa)}>
                         {qa.featured ? '⭐' : '☆'}
                       </button>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button
-                        className="admin-action-btn"
-                        onClick={() => { setSelected(qa); setModal('edit'); }}
-                        title="Modifier"
-                      >✏️</button>
-                      <button
-                        className="admin-action-btn admin-action-btn--delete"
-                        onClick={() => { setSelected(qa); setModal('delete'); }}
-                        title="Supprimer"
-                      >🗑</button>
+                      <button className="admin-action-btn" onClick={() => { setSelected(qa); setModal('edit'); }}>✏️</button>
+                      <button className="admin-action-btn admin-action-btn--delete" onClick={() => { setSelected(qa); setModal('delete'); }}>🗑</button>
                     </td>
                   </tr>
                 ))}
@@ -271,7 +352,6 @@ export default function AdminDashboard() {
         </div>
       </main>
 
-      {/* Modals */}
       {(modal === 'add' || modal === 'edit') && (
         <QAModal
           initial={modal === 'edit' ? selected : null}
