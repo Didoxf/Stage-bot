@@ -314,4 +314,3 @@ ${knowledgeBase.trim() ? `BASE DE CONNAISSANCES :\n${knowledgeBase}` : ''}`;
 });
 
 module.exports = router;
-
