@@ -144,7 +144,7 @@ async function sendFromQA(qa) {
             <button
               key={qa._id}
               className="chat-sidebar-item"
-              onClick={() => send(getQLabel(qa))}
+              onClick={() => sendFromQA(qa)}
             >
               {getQLabel(qa)}
             </button>
@@ -165,7 +165,7 @@ async function sendFromQA(qa) {
                       <button
                         key={qa._id}
                         className="chat-suggestion-card"
-                        onClick={() => send(getQLabel(qa))}
+                        onClick={() => sendFromQA(qa)}
                       >
                         {getQLabel(qa)}
                       </button>
