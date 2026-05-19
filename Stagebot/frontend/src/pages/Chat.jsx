@@ -21,9 +21,9 @@ function TypingIndicator() {
 
 export default function Chat() {
   const { t, i18n } = useTranslation();
-  const [input, setInput]       = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [qaList, setQaList]     = useState([]);
+  const [input, setInput]     = useState('');
+  const [loading, setLoading] = useState(false);
+  const [qaList, setQaList]   = useState([]);
   const endRef = useRef(null);
   const sessionRef = useRef(localStorage.getItem(SESSION_KEY) || null);
 
@@ -32,12 +32,12 @@ export default function Chat() {
     catch { return []; }
   });
 
-  // Save history
+  // Sauvegarder l'historique
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(messages));
   }, [messages]);
 
-  // Load popular Q/A for sidebar
+  // Charger les Q/R populaires pour la sidebar
   useEffect(() => {
     getQA().then(data => setQaList(data.filter(q => q.featured))).catch(() => {});
   }, []);
@@ -46,14 +46,42 @@ export default function Chat() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  // Obtenir le label de la question selon la langue
+  function getQLabel(qa) {
+    const lang = i18n.language;
+    if (lang === 'en' && qa.question_en) return qa.question_en;
+    if (lang === 'ar' && qa.question_ar) return qa.question_ar;
+    return qa.question_fr;
+  }
+
+  // Obtenir la réponse selon la langue
+  function getAnswer(qa) {
+    const lang = i18n.language;
+    if (lang === 'en' && qa.answer_en) return qa.answer_en;
+    if (lang === 'ar' && qa.answer_ar) return qa.answer_ar;
+    return qa.answer_fr;
+  }
+
+  // Clic sur une question de la sidebar ou suggestions
+  // → affiche directement la réponse depuis la BDD sans passer par Groq
+  function sendFromQA(qa) {
+    const question = getQLabel(qa);
+    const answer   = getAnswer(qa);
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: question, id: Date.now() },
+      { role: 'bot',  content: answer,   id: Date.now() + 1 },
+    ]);
+  }
+
+  // Envoi d'une question tapée manuellement → passe par Groq
   async function send(text) {
     const trimmed = text?.trim();
     if (!trimmed || loading) return;
     setInput('');
     setLoading(true);
 
-    const userMsg = { role: 'user', content: trimmed, id: Date.now() };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev, { role: 'user', content: trimmed, id: Date.now() }]);
 
     try {
       const data = await sendMessage(trimmed, sessionRef.current, i18n.language);
@@ -76,21 +104,6 @@ export default function Chat() {
       setLoading(false);
     }
   }
-  // Fonction spéciale pour les clics sur la sidebar
-// Envoie directement la réponse depuis la BDD sans passer par Groq
-async function sendFromQA(qa) {
-  const question = getQLabel(qa);
-  const answer = lang === 'en' && qa.answer_en ? qa.answer_en 
-               : lang === 'ar' && qa.answer_ar ? qa.answer_ar 
-               : qa.answer_fr;
-
-  // Ajouter question + réponse directement dans le chat
-  setMessages(prev => [
-    ...prev,
-    { role: 'user', content: question, id: Date.now() },
-    { role: 'bot', content: answer, id: Date.now() + 1 },
-  ]);
-}
 
   function reset() {
     setMessages([]);
@@ -106,15 +119,6 @@ async function sendFromQA(qa) {
     }
   }
 
-  // Get questions in current language
-  function getQLabel(qa) {
-    const lang = i18n.language;
-    if (lang === 'en' && qa.question_en) return qa.question_en;
-    if (lang === 'ar' && qa.question_ar) return qa.question_ar;
-    return qa.question_fr;
-  }
-
-  // Featured questions for empty state grid
   const featured = qaList.slice(0, 4);
 
   return (
@@ -137,7 +141,7 @@ async function sendFromQA(qa) {
 
       {/* Body */}
       <div className="chat-body">
-        {/* Sidebar */}
+        {/* Sidebar — clic direct depuis BDD */}
         <aside className="chat-sidebar">
           <p className="chat-sidebar-label">{t('chat_popular')}</p>
           {qaList.map(qa => (
@@ -187,7 +191,7 @@ async function sendFromQA(qa) {
             <div ref={endRef} />
           </div>
 
-          {/* Input */}
+          {/* Input — questions tapées → Groq */}
           <form className="chat-input-area" onSubmit={e => { e.preventDefault(); send(input); }}>
             <textarea
               className="chat-input"
