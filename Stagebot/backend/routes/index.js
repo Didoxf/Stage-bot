@@ -74,10 +74,11 @@ router.post('/admin/login', (req, res) => {
     email    === process.env.ADMIN_EMAIL &&
     password === process.env.ADMIN_PASSWORD
   ) {
+    // Token sans expiration — sessionStorage gère la durée de vie côté frontend
+    // Le token est détruit automatiquement à la fermeture du navigateur
     const token = jwt.sign(
-      { email, role: 'admin' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { email, role: 'admin', loginAt: Date.now() },
+      process.env.JWT_SECRET
     );
     return res.json({ token });
   }
@@ -226,7 +227,7 @@ router.post('/chat', async (req, res) => {
     const qaList = await db.collection('qa_pairs').find({}).toArray();
     if (qaList.length > 0) {
       knowledgeBase += '=== QUESTIONS ET RÉPONSES ===\n\n';
-      qaList.forEach((qa, i) => {
+      qaList.forEach((qa) => {
         knowledgeBase += `Q: ${qa.question_fr}\nR: ${qa.answer_fr}\n`;
         if (qa.question_en) knowledgeBase += `Q(EN): ${qa.question_en}\nR(EN): ${qa.answer_en}\n`;
         if (qa.question_ar) knowledgeBase += `Q(AR): ${qa.question_ar}\nR(AR): ${qa.answer_ar}\n`;
@@ -287,7 +288,7 @@ ${knowledgeBase}`;
       { role: 'system', content: systemPrompt },
       ...history,
     ],
-    temperature: 0.0, // 0 = réponses strictement basées sur le contexte
+    temperature: 0.0,
     max_tokens: 1024,
   });
 
@@ -316,18 +317,7 @@ ${knowledgeBase}`;
 
         let answer = parsed.choices?.[0]?.message?.content || NOT_FOUND;
 
-        // Vérification supplémentaire — si Groq répond quand même de sa tête
-        // on détecte les réponses qui ne citent pas la base
-        const reponseInvalide = [
-          'je pense que',
-          'généralement',
-          'en général',
-          'il est possible que',
-          'cela dépend',
-          'je suppose',
-        ];
-
-        // Si la réponse est très courte et ne vient clairement pas de la base
+        // Si la réponse est trop courte elle ne vient pas de la base
         if (answer.length < 20) {
           answer = NOT_FOUND;
         }
