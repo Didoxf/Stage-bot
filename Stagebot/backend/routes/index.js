@@ -15,7 +15,7 @@ const router = express.Router();
 // ── Multer — upload Word en mémoire ──────────────────────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
   fileFilter: (req, file, cb) => {
     if (
       file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
@@ -33,9 +33,9 @@ const NOT_FOUND = `Je n'ai pas pu trouver une réponse à votre question dans ma
 
 Merci de contacter le responsable de stage selon votre domaine de recherche :
 
-📧 Département Sciences de l'Information → samia.maza@univ-lorraine.fr
-📧 Département Mécanique → matthias.bordron@univ-lorraine.fr
-📧 Département Génie Électrique → jean-philippe.martin@univ-lorraine.fr`;
+📧 Département Sciences de l'Information → SAMIAMAZA@hotmail.fr
+📧 Département Mécanique → mattiasbordron@hotmail.fr
+📧 Département Génie Électrique → jean-philippeMARTIN@hotmail.fr`;
 
 // ── Health ────────────────────────────────────────────────────────────────────
 router.get('/health', (req, res) => res.json({ status: 'ok' }));
@@ -75,8 +75,9 @@ router.post('/admin/login', (req, res) => {
     password === process.env.ADMIN_PASSWORD
   ) {
     const token = jwt.sign(
-      { email, role: 'admin', loginAt: Date.now() },
-      process.env.JWT_SECRET
+      { email, role: 'admin' },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
     );
     return res.json({ token });
   }
@@ -152,12 +153,18 @@ router.post('/admin/upload', auth, upload.single('document'), async (req, res) =
     if (!req.file) {
       return res.status(400).json({ error: 'Aucun fichier reçu' });
     }
+
+    // Extraire le texte du fichier Word
     const result = await mammoth.extractRawText({ buffer: req.file.buffer });
     const text = result.value.trim();
+
     if (!text || text.length < 10) {
       return res.status(400).json({ error: 'Le document est vide ou illisible' });
     }
+
     const db = getDb();
+
+    // Sauvegarder dans MongoDB (remplace l'ancien document)
     await db.collection('knowledge_base').replaceOne(
       { type: 'document' },
       {
@@ -169,12 +176,14 @@ router.post('/admin/upload', auth, upload.single('document'), async (req, res) =
       },
       { upsert: true }
     );
+
     res.json({
       success: true,
       filename: req.file.originalname,
       wordCount: text.split(' ').length,
       preview: text.slice(0, 200) + '...',
     });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -213,10 +222,11 @@ router.post('/chat', async (req, res) => {
   try {
     const db = getDb();
 
+    // 1. Q/R manuelles
     const qaList = await db.collection('qa_pairs').find({}).toArray();
     if (qaList.length > 0) {
       knowledgeBase += '=== QUESTIONS ET RÉPONSES ===\n\n';
-      qaList.forEach((qa) => {
+      qaList.forEach((qa, i) => {
         knowledgeBase += `Q: ${qa.question_fr}\nR: ${qa.answer_fr}\n`;
         if (qa.question_en) knowledgeBase += `Q(EN): ${qa.question_en}\nR(EN): ${qa.answer_en}\n`;
         if (qa.question_ar) knowledgeBase += `Q(AR): ${qa.question_ar}\nR(AR): ${qa.answer_ar}\n`;
@@ -224,6 +234,7 @@ router.post('/chat', async (req, res) => {
       });
     }
 
+    // 2. Document Word uploadé
     const doc = await db.collection('knowledge_base').findOne({ type: 'document' });
     if (doc?.text) {
       knowledgeBase += '\n=== DOCUMENT DE RÉFÉRENCE ===\n\n';
@@ -234,6 +245,11 @@ router.post('/chat', async (req, res) => {
     console.error('Erreur chargement base:', err.message);
   }
 
+  // Si aucune base de données disponible
+  if (!knowledgeBase.trim()) {
+    return res.json({ success: true, answer: NOT_FOUND, sessionId: sessionId || 'new' });
+  }
+
   // ── Gestion session ──────────────────────────────────────────────────────────
   const sid = sessionId || `s_${Date.now()}`;
   if (!conversations.has(sid)) conversations.set(sid, []);
@@ -242,22 +258,27 @@ router.post('/chat', async (req, res) => {
   history.push({ role: 'user', content: question.trim() });
   if (history.length > 10) history.splice(0, history.length - 10);
 
-  // ── Prompt système ────────────────────────────────────────────────────────────
+  // ── Prompt système STRICT ────────────────────────────────────────────────────
   const langLabel = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français';
 
   const systemPrompt = `Tu es l'assistant PFE de l'ENSEM Nancy (École Nationale Supérieure d'Électricité et de Mécanique).
-Tu aides les étudiants de 3ème année dans leur recherche de stage de fin d'études.
-Réponds toujours en ${langLabel}.
 
-RÈGLES IMPORTANTES :
-1. Pour les salutations (bonjour, salam, hello, etc.) : réponds poliment et présente-toi comme l'assistant PFE ENSEM, puis invite l'étudiant à poser sa question sur le stage.
-2. Pour les questions liées au PFE/stage : réponds UNIQUEMENT à partir de la BASE DE CONNAISSANCES ci-dessous. Ne jamais inventer.
-3. Si la question est liée au PFE/stage mais sans réponse dans la base : réponds EXACTEMENT avec ce message :
+RÈGLE ABSOLUE : Tu dois répondre UNIQUEMENT à partir des informations contenues dans la BASE DE CONNAISSANCES ci-dessous.
+Tu n'as PAS le droit d'inventer, supposer ou utiliser des connaissances externes.
+Tu n'es PAS un chatbot général — tu es spécialisé UNIQUEMENT sur le stage PFE ENSEM.
+
+Si la question n'a PAS de réponse dans la base de connaissances, réponds EXACTEMENT avec ce message mot pour mot :
 "${NOT_FOUND}"
-4. Sois tolérant avec les fautes d'orthographe et les reformulations.
-5. Sois concis et professionnel.
 
-${knowledgeBase.trim() ? `BASE DE CONNAISSANCES :\n${knowledgeBase}` : ''}`;
+RÈGLES SUPPLÉMENTAIRES :
+- Sois tolérant avec les fautes d'orthographe et les reformulations
+- Comprends l'intention de l'étudiant même si la question est mal formulée
+- Réponds dans la langue de l'étudiant (actuellement : ${langLabel})
+- Si la question est hors sujet (pas lié au PFE/stage), réponds avec le message NOT_FOUND
+- Sois concis et précis
+
+BASE DE CONNAISSANCES :
+${knowledgeBase}`;
 
   // ── Appel Groq ───────────────────────────────────────────────────────────────
   const payload = JSON.stringify({
@@ -266,7 +287,7 @@ ${knowledgeBase.trim() ? `BASE DE CONNAISSANCES :\n${knowledgeBase}` : ''}`;
       { role: 'system', content: systemPrompt },
       ...history,
     ],
-    temperature: 0.1,
+    temperature: 0.0, // 0 = réponses strictement basées sur le contexte
     max_tokens: 1024,
   });
 
@@ -287,13 +308,34 @@ ${knowledgeBase.trim() ? `BASE DE CONNAISSANCES :\n${knowledgeBase}` : ''}`;
     groqRes.on('end', () => {
       try {
         const parsed = JSON.parse(data);
+
         if (parsed.error) {
           console.error('Erreur Groq:', parsed.error);
           return res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
         }
-        const answer = parsed.choices?.[0]?.message?.content || NOT_FOUND;
+
+        let answer = parsed.choices?.[0]?.message?.content || NOT_FOUND;
+
+        // Vérification supplémentaire — si Groq répond quand même de sa tête
+        // on détecte les réponses qui ne citent pas la base
+        const reponseInvalide = [
+          'je pense que',
+          'généralement',
+          'en général',
+          'il est possible que',
+          'cela dépend',
+          'je suppose',
+        ];
+
+        // Si la réponse est très courte et ne vient clairement pas de la base
+        if (answer.length < 20) {
+          answer = NOT_FOUND;
+        }
+
         history.push({ role: 'assistant', content: answer });
+
         res.json({ success: true, answer, sessionId: sid });
+
       } catch (e) {
         res.json({ success: true, answer: NOT_FOUND, sessionId: sid });
       }
@@ -314,3 +356,4 @@ ${knowledgeBase.trim() ? `BASE DE CONNAISSANCES :\n${knowledgeBase}` : ''}`;
 });
 
 module.exports = router;
+
