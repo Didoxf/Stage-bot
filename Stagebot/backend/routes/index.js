@@ -246,18 +246,19 @@ router.post('/chat', async (req, res) => {
   const langLabel = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français';
 
   const systemPrompt = `Tu es l'assistant PFE de l'ENSEM Nancy (École Nationale Supérieure d'Électricité et de Mécanique).
-Tu aides les étudiants de 3ème année dans leur recherche de stage de fin d'études.
+Tu aides les étudiants de 3ème année dans leur recherche de stage de fin d'études (PFE).
 Réponds toujours en ${langLabel}.
 
-RÈGLES IMPORTANTES :
-1. Pour les salutations (bonjour, salam, hello, etc.) : réponds poliment et présente-toi comme l'assistant PFE ENSEM, puis invite l'étudiant à poser sa question sur le stage.
-2. Pour les questions liées au PFE/stage : réponds UNIQUEMENT à partir de la BASE DE CONNAISSANCES ci-dessous. Ne jamais inventer.
-3. Si la question est liée au PFE/stage mais sans réponse dans la base : réponds EXACTEMENT avec ce message :
+RÈGLES :
+1. Si l'étudiant envoie une salutation (bonjour, salam, hello, bonsoir, etc.) : réponds poliment, présente-toi comme l'assistant PFE ENSEM, et invite-le à poser sa question sur le stage PFE.
+2. Si la question concerne le PFE ou le stage : réponds UNIQUEMENT à partir de la BASE DE CONNAISSANCES ci-dessous. Ne jamais inventer ni utiliser des connaissances externes.
+3. Si la question concerne le PFE mais qu'aucune réponse ne se trouve dans la base : réponds EXACTEMENT avec ce message mot pour mot :
 "${NOT_FOUND}"
-4. Sois tolérant avec les fautes d'orthographe et les reformulations.
+4. Sois tolérant avec les fautes d'orthographe et les reformulations — comprends l'intention de l'étudiant.
 5. Sois concis et professionnel.
 
-${knowledgeBase.trim() ? `BASE DE CONNAISSANCES :\n${knowledgeBase}` : ''}`;
+BASE DE CONNAISSANCES :
+${knowledgeBase}`;
 
   // ── Appel Groq ───────────────────────────────────────────────────────────────
   const payload = JSON.stringify({
