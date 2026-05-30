@@ -97,7 +97,7 @@ export const resources = {
       feat3_title: "Validated database",
       feat3_desc: "Information verified by the institution",
 
-      chat_title: "SFEI Assistant ENSEM",
+      chat_title: "EFYI Assistant ENSEM",
       chat_popular: "POPULAR QUESTIONS",
       chat_welcome: "How can I help you?",
       chat_welcome_sub: "Choose a popular question or type your own",
