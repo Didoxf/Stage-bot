@@ -13,7 +13,7 @@ export const resources = {
       // Hero
       hero_subtitle: "L'ASSISTANT INTELLIGENT POUR VOTRE STAGE DE FIN D'ÉTUDES INGENIEUR",
       hero_title: "Toutes les réponses sur votre stage de fin d'étude ingénieur SFEI, en un seul endroit",
-      hero_desc: "Posez vos questions dans la langue de votre choix. Notre IA comprend les reformulations, les abréviations et même les fautes d'orthographe.",
+      hero_desc: "Ask your questions in the language of your choice. Notre IA comprend les reformulations, les abréviations et même les fautes d'orthographe.",
       hero_cta: "Commencer à discuter →",
       
 
@@ -153,7 +153,7 @@ export const resources = {
 
       hero_subtitle: "المساعد الذكي لتدريب نهاية الدراسة",
       hero_title: "كل الإجابات حول تدريب SFEI في مكان واحد",
-      hero_desc: "اطرح أسئلتك بالفرنسية أو الإنجليزية أو العربية. يفهم الذكاء الاصطناعي إعادة الصياغة والاختصارات وحتى الأخطاء الإملائية.",
+      hero_desc: "اطرح أسئلتك باللغة التي تختارها. يفهم الذكاء الاصطناعي إعادة الصياغة والاختصارات وحتى الأخطاء الإملائية.",
       hero_cta: "ابدأ المحادثة ←",
 
       feat1_title: "متاح 24/7",
