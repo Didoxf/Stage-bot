@@ -12,9 +12,11 @@ export const resources = {
 
       // Hero
       hero_subtitle: "L'ASSISTANT INTELLIGENT POUR VOTRE STAGE DE FIN D'ÉTUDES",
-      hero_title: "Toutes les réponses sur votre stage PFE, en un seul endroit",
-      hero_desc: "Posez vos questions en français, anglais ou arabe. Notre IA comprend les reformulations, les abréviations et même les fautes d'orthographe.",
+      hero_title: "Toutes les réponses sur votre stage de fin d'étude ingénieur SFEI, en un seul endroit",
+      hero_desc: "Posez vos questions dans la langue de votre choix. Notre IA comprend les reformulations, les abréviations et même les fautes d'orthographe.",
       hero_cta: "Commencer à discuter →",
+      hero_desc: "test",
+      
 
       // Features
       feat1_title: "Disponible 24h/24",
