@@ -163,7 +163,7 @@ export const resources = {
       feat3_title: "قاعدة موثقة",
       feat3_desc: "معلومات مُتحقق منها من قبل المؤسسة",
 
-      chat_title: "مساعد SFEI ENSEM",
+      chat_title: "مساعد SFEI للمدرسة الوطنية العليا للكهرباء والميكانيك (ENSEM)",
       chat_popular: "الأسئلة الشائعة",
       chat_welcome: "كيف يمكنني مساعدتك؟",
       chat_welcome_sub: "اختر سؤالاً شائعاً أو اكتب سؤالك",
