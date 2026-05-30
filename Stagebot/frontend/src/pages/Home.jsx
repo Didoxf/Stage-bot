@@ -15,7 +15,7 @@ export default function Home() {
       <nav className="home-nav">
         <div className="home-nav-logo">
           <EnsemLogo size={32} />
-          <span className="home-nav-title">PFE Assistant ENSEM</span>
+          <span className="home-nav-title">SFEI Assistant ENSEM</span>
         </div>
         <div className="home-nav-right">
           <LangSwitcher />
