@@ -11,7 +11,7 @@ export const resources = {
       nav_back: "Accueil",
 
       // Hero
-      hero_subtitle: "L'ASSISTANT INTELLIGENT POUR VOTRE STAGE DE FIN D'ÉTUDES",
+      hero_subtitle: "L'ASSISTANT INTELLIGENT POUR VOTRE STAGE DE FIN D'ÉTUDES INGENIEUR",
       hero_title: "Toutes les réponses sur votre stage de fin d'étude ingénieur SFEI, en un seul endroit",
       hero_desc: "Posez vos questions dans la langue de votre choix. Notre IA comprend les reformulations, les abréviations et même les fautes d'orthographe.",
       hero_cta: "Commencer à discuter →",
@@ -21,16 +21,16 @@ export const resources = {
       feat1_title: "Disponible 24h/24",
       feat1_desc: "Obtenez des réponses instantanées à toutes heures",
       feat2_title: "Multilingue",
-      feat2_desc: "Français, anglais et arabe supportés",
+      feat2_desc: "Toutes langues supportés",
       feat3_title: "Base validée",
       feat3_desc: "Informations vérifiées par l'établissement",
 
       // Chat
-      chat_title: "PFE Assistant ENSEM",
+      chat_title: "SEFI Assistant ENSEM",
       chat_popular: "QUESTIONS POPULAIRES",
       chat_welcome: "Comment puis-je vous aider ?",
       chat_welcome_sub: "Choisissez une question populaire ou tapez la vôtre",
-      chat_placeholder: "Posez votre question sur le stage PFE...",
+      chat_placeholder: "Posez votre question sur le stage SFEI...",
       chat_send: "Envoyer",
 
       // Admin Login
@@ -42,7 +42,7 @@ export const resources = {
       admin_back: "← Accueil",
 
       // Admin Dashboard
-      admin_dashboard_title: "Gestion de la base de connaissances PFE",
+      admin_dashboard_title: "Gestion de la base de connaissances SFEI",
       admin_total: "QUESTIONS TOTALES",
       admin_featured: "QUESTIONS PHARES",
       admin_categories: "CATÉGORIES",
@@ -85,23 +85,23 @@ export const resources = {
       nav_new_conv: "New conversation",
       nav_back: "Home",
 
-      hero_subtitle: "THE INTELLIGENT ASSISTANT FOR YOUR FINAL YEAR INTERNSHIP",
-      hero_title: "All answers about your PFE internship, in one place",
+      hero_subtitle: "THE INTELLIGENT ASSISTANT FOR YOUR ENGINEERING FINAL-YEAR INTERNSHIP",
+      hero_title: "All the answers about your engineering final-year internship (EFYI), in one place.",
       hero_desc: "Ask your questions in French, English or Arabic. Our AI understands rephrasing, abbreviations and even spelling mistakes.",
       hero_cta: "Start chatting →",
 
       feat1_title: "Available 24/7",
       feat1_desc: "Get instant answers at any time",
-      feat2_title: "Multilingual",
-      feat2_desc: "French, English and Arabic supported",
+      feat2_title: "Multilingue",
+      feat2_desc: "All language supported",
       feat3_title: "Validated database",
       feat3_desc: "Information verified by the institution",
 
-      chat_title: "PFE Assistant ENSEM",
+      chat_title: "SFEI Assistant ENSEM",
       chat_popular: "POPULAR QUESTIONS",
       chat_welcome: "How can I help you?",
       chat_welcome_sub: "Choose a popular question or type your own",
-      chat_placeholder: "Ask your question about the PFE internship...",
+      chat_placeholder: "Ask your question about the SEFI internship...",
       chat_send: "Send",
 
       admin_login_title: "Administrator login",
@@ -111,7 +111,7 @@ export const resources = {
       admin_submit: "Sign in",
       admin_back: "← Home",
 
-      admin_dashboard_title: "PFE Knowledge Base Management",
+      admin_dashboard_title: "EFYI Knowledge Base Management",
       admin_total: "TOTAL QUESTIONS",
       admin_featured: "FEATURED QUESTIONS",
       admin_categories: "CATEGORIES",
@@ -152,22 +152,22 @@ export const resources = {
       nav_back: "الرئيسية",
 
       hero_subtitle: "المساعد الذكي لتدريب نهاية الدراسة",
-      hero_title: "كل الإجابات حول تدريب PFE في مكان واحد",
+      hero_title: "كل الإجابات حول تدريب SFEI في مكان واحد",
       hero_desc: "اطرح أسئلتك بالفرنسية أو الإنجليزية أو العربية. يفهم الذكاء الاصطناعي إعادة الصياغة والاختصارات وحتى الأخطاء الإملائية.",
       hero_cta: "ابدأ المحادثة ←",
 
       feat1_title: "متاح 24/7",
       feat1_desc: "احصل على إجابات فورية في أي وقت",
       feat2_title: "متعدد اللغات",
-      feat2_desc: "يدعم الفرنسية والإنجليزية والعربية",
+      feat2_desc: "يدعم جميع اللغات",
       feat3_title: "قاعدة موثقة",
       feat3_desc: "معلومات مُتحقق منها من قبل المؤسسة",
 
-      chat_title: "مساعد PFE ENSEM",
+      chat_title: "مساعد SFEI ENSEM",
       chat_popular: "الأسئلة الشائعة",
       chat_welcome: "كيف يمكنني مساعدتك؟",
       chat_welcome_sub: "اختر سؤالاً شائعاً أو اكتب سؤالك",
-      chat_placeholder: "اطرح سؤالك حول تدريب PFE...",
+      chat_placeholder: "اطرح سؤالك حول تدريب SFEI...",
       chat_send: "إرسال",
 
       admin_login_title: "تسجيل دخول المسؤول",
@@ -177,7 +177,7 @@ export const resources = {
       admin_submit: "تسجيل الدخول",
       admin_back: "→ الرئيسية",
 
-      admin_dashboard_title: "إدارة قاعدة المعرفة PFE",
+      admin_dashboard_title: "إدارة قاعدة المعرفة SFEI",
       admin_total: "إجمالي الأسئلة",
       admin_featured: "الأسئلة المميزة",
       admin_categories: "الفئات",
