@@ -87,7 +87,7 @@ export const resources = {
 
       hero_subtitle: "THE INTELLIGENT ASSISTANT FOR YOUR ENGINEERING FINAL-YEAR INTERNSHIP",
       hero_title: "All the answers about your engineering final-year internship (EFYI), in one place.",
-      hero_desc: "Ask your questions in French, English or Arabic. Our AI understands rephrasing, abbreviations and even spelling mistakes.",
+      hero_desc: "Ask your questions in the language of your choice. Our AI understands rephrasing, abbreviations and even spelling mistakes.",
       hero_cta: "Start chatting →",
 
       feat1_title: "Available 24/7",
